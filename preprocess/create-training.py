@@ -72,6 +72,23 @@ def create_training_json(base_path, videos_folder="training-videos", output_json
                     # Agregar la instancia al gloss correspondiente
                     data[gloss_name]["instances"].append(video_instance)
 
+    # Asignar los splits a cada gloss
+    for gloss_name, gloss_data in data.items():
+        instances = gloss_data["instances"]
+        num_instances = len(instances)
+
+        # Los últimos 4 se asignan a 'test'
+        for instance in instances[-4:]:
+            instance["split"] = "test"
+
+        # Los penúltimos 4 se asignan a 'val'
+        for instance in instances[-8:-4]:
+            instance["split"] = "val"
+
+        # El resto de los videos son para 'train'
+        for instance in instances[:-8]:
+            instance["split"] = "train"
+
     # Convertir el diccionario en una lista
     output_data = list(data.values())
 
