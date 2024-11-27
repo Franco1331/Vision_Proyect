@@ -1,33 +1,34 @@
 import cv2
 import os
 import mediapipe as mp
-import time
 import numpy as np
 import json
 
-FRAMES_FOLDER = "./video-frames"
+# Obtener la carpeta base del proyecto (un nivel arriba del script actual)
+BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+# Rutas relativas
+FRAMES_FOLDER = os.path.join(BASE_PATH, "video-frames")
+TRAINING_JSON_PATH = os.path.join(BASE_PATH, "preprocess", "training.json")
+DATASET_JSON_PATH = os.path.join(BASE_PATH, "dataset.json")
 
 # Inicializar Mediapipe para la detección de manos
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands()
 
+
 def extract_hand_keypoints(frame):
     # Convertir la imagen a RGB (Mediapipe espera imágenes RGB)
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    
-    # Asegurar que el frame sea cuadrado
-    height, width, _ = rgb_frame.shape
-    side = min(height, width)
-    cropped_frame = rgb_frame[:side, :side]
-    
-    results = hands.process(cropped_frame)
-    
+    results = hands.process(rgb_frame)
+
     keypoints = []
     if results.multi_hand_landmarks:
         for hand_landmarks in results.multi_hand_landmarks:
             for landmark in hand_landmarks.landmark:
                 keypoints.append([landmark.x, landmark.y, landmark.z])  # Coordenadas (x, y, z)
     return keypoints
+
 
 def pad_keypoints(keypoints, target_length):
     # Pad the keypoints array to ensure consistent shape
@@ -36,13 +37,15 @@ def pad_keypoints(keypoints, target_length):
     padded_keypoints[:min(len(keypoints), target_length), :] = keypoints[:target_length, :]
     return padded_keypoints.tolist()
 
+
 def parse_points(frame):
     keypoints = extract_hand_keypoints(frame)
-    
+
     if len(keypoints) > 42:
         return keypoints[:42]
 
     return pad_keypoints(keypoints, 42)
+
 
 def find_frame_word(data, video_id):
     for sample in data:
@@ -50,21 +53,21 @@ def find_frame_word(data, video_id):
             if instance["video_id"] == video_id:
                 return sample["gloss"]
 
+
 def main():
     folders = os.listdir(FRAMES_FOLDER)
-
     dataset = []
 
-    with open(r"D:\Descargas Personal\hand-vision-master\hand-vision-master\preprocess\training.json") as training_config_file:
+    # Abrir el archivo training.json desde su ruta relativa
+    with open(TRAINING_JSON_PATH) as training_config_file:
         data = json.load(training_config_file)
 
         for folder in folders:
             input_points = []
-
-            folder_files = os.listdir(f"{FRAMES_FOLDER}/{folder}")
+            folder_files = os.listdir(os.path.join(FRAMES_FOLDER, folder))
 
             for file in folder_files[:30]:
-                path = f"{FRAMES_FOLDER}/{folder}/{file}"
+                path = os.path.join(FRAMES_FOLDER, folder, file)
                 frame = cv2.imread(path)
                 try:
                     input_points.append(parse_points(frame))
@@ -83,8 +86,10 @@ def main():
                 "frames_compiled_points": input_points
             })
 
-    with open("dataset.json", "w") as file:
+    # Guardar el archivo dataset.json en la ruta relativa
+    with open(DATASET_JSON_PATH, "w") as file:
         json.dump(dataset, file)
+
 
 if __name__ == "__main__":
     main()

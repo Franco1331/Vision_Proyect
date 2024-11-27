@@ -1,8 +1,12 @@
 import os
 import cv2
 
-VIDEOS_FOLDER = "./training-videos"
-FRAMES_FOLDER = "./video-frames"
+# Obtener la carpeta base del proyecto (un nivel arriba del script actual)
+BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+# Rutas relativas
+VIDEOS_FOLDER = os.path.join(BASE_PATH, "training-videos")
+FRAMES_FOLDER = os.path.join(BASE_PATH, "video-frames")
 
 def split_video(output_folder, video_path):
     # Crear la carpeta de salida para los frames
@@ -19,7 +23,7 @@ def split_video(output_folder, video_path):
     print(f"Processing '{video_path}' - FPS: {video_fps}")
 
     # Calcular el intervalo de frames (para guardar aproximadamente 25 frames por segundo)
-    frame_interval = int(round(video_fps / 25)) if video_fps > 25 else 1
+    frame_interval = int(round(video_fps / 30)) if video_fps > 25 else 1
 
     frame_count = 0
     saved_count = 0
