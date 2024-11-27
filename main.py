@@ -22,9 +22,9 @@ print(f"Using {device} device")
 # Cargar el conjunto de datos
 dataset = SignsDataset()
 
-BATCH_SIZE = 8
+BATCH_SIZE = 32
 SHUFFLE = False
-EPOCHS = 150
+EPOCHS = 250
 
 train_dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=SHUFFLE)
 
@@ -158,7 +158,7 @@ def run():
         print("-" * 50)
 
     # Guardar el modelo
-    torch.save(model.state_dict(), "model5.pth")
+    torch.save(model.state_dict(), "model.pth")
 
     # Graficar los resultados
     epochs = range(1, EPOCHS + 1)
