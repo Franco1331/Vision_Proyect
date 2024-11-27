@@ -64,4 +64,4 @@ Para utilizar el repositorio es necesario abrir `Anaconda Prompt` e ir a una la 
 
 # Running
 
-_Instrucciones en construcción._
+Ejecutar camera.py para realizar las pruebas de funcionamiento en tiempo real de forma local
