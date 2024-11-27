@@ -52,20 +52,16 @@ def create_training_json(base_path, videos_folder="training-videos", output_json
                     # Crear una instancia para el video
                     video_instance = {
                         "bbox": [
-                            int(metadata["width"] * 0.1),  # Coordenada x inicial
-                            int(metadata["height"] * 0.1),  # Coordenada y inicial
-                            int(metadata["width"] * 0.9),  # Coordenada x final
-                            int(metadata["height"] * 0.9)  # Coordenada y final
+                            int(metadata["width"] * 1),  # Coordenada x inicial (central)
+                            int(metadata["height"] * 0.20),  # Coordenada y inicial (central)
+                            int(metadata["width"] * 1),  # Coordenada x final
+                            int(metadata["height"] * 0.80)   # Coordenada y final
                         ],
                         "fps": metadata["fps"],
                         "frame_end": -1,  # Valor predeterminado
                         "frame_start": 1,  # Valor predeterminado
-                        "instance_id": 1,  # Valor predeterminado
-                        "signer_id": 1,    # Valor predeterminado
-                        "source": "local",  # Cambiar si necesitas otra fuente
                         "split": "train",  # Valor predeterminado
                         "path": os.path.relpath(file_path, base_path).replace("\\", "/"),  # Ruta relativa al proyecto
-                        "variation_id": 0,  # Valor predeterminado
                         "video_id": os.path.splitext(file_name)[0]  # Nombre sin extensión
                     }
 
@@ -78,15 +74,15 @@ def create_training_json(base_path, videos_folder="training-videos", output_json
         num_instances = len(instances)
 
         # Los últimos 4 se asignan a 'test'
-        for instance in instances[-4:]:
+        for instance in instances[-6:]:
             instance["split"] = "test"
 
         # Los penúltimos 4 se asignan a 'val'
-        for instance in instances[-8:-4]:
+        for instance in instances[-12:-6]:
             instance["split"] = "val"
 
         # El resto de los videos son para 'train'
-        for instance in instances[:-8]:
+        for instance in instances[:-6]:
             instance["split"] = "train"
 
     # Convertir el diccionario en una lista

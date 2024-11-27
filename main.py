@@ -1,11 +1,12 @@
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-import matplotlib.pyplot as plt  # Para graficar
-from sklearn.metrics import precision_score, recall_score, confusion_matrix
+import matplotlib.pyplot as plt
+from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix, roc_curve, auc
 import seaborn as sns
 from dataset import SignsDataset
 from models import ANN
+from sklearn.preprocessing import label_binarize
 
 # Determinar el dispositivo (GPU, MPS, o CPU)
 device = (
@@ -73,6 +74,7 @@ def evaluate_model(dataloader, model, loss_fn):
     total = 0
     all_labels = []
     all_preds = []
+    all_probs = []  # Para almacenar las probabilidades predichas
     num_batches = len(dataloader)
 
     with torch.no_grad():
@@ -88,15 +90,25 @@ def evaluate_model(dataloader, model, loss_fn):
             all_labels.extend(y.cpu().numpy())
             all_preds.extend(predicted_labels.cpu().numpy())
 
+            # Convertir logits a probabilidades
+            probs = torch.softmax(pred, dim=1)  # Probabilidades de todas las clases
+            all_probs.extend(probs.cpu().numpy())
+
     avg_loss = test_loss / num_batches
     accuracy = correct / total
 
-    # Calcular precisión, recall y matriz de confusión
+    # Calcular precisión, recall, f1 y matriz de confusión
     precision = precision_score(all_labels, all_preds, average='weighted')
     recall = recall_score(all_labels, all_preds, average='weighted')
+    f1 = f1_score(all_labels, all_preds, average='weighted')
     cm = confusion_matrix(all_labels, all_preds)
 
-    return avg_loss, accuracy, precision, recall, cm
+    # Calcular ROC y AUC
+    all_labels_bin = label_binarize(all_labels, classes=[i for i in range(len(dataset.labels))])  # Binarización de las etiquetas
+    fpr, tpr, thresholds = roc_curve(all_labels_bin.ravel(), [p for prob in all_probs for p in prob])  # Flatten the probability values
+    auc_score = auc(fpr, tpr)
+
+    return avg_loss, accuracy, precision, recall, f1, cm, fpr, tpr, auc_score
 
 # Función para graficar la matriz de confusión
 def plot_confusion_matrix(cm, labels):
@@ -105,7 +117,15 @@ def plot_confusion_matrix(cm, labels):
     plt.xlabel('Predicted labels')
     plt.ylabel('True labels')
     plt.title('Confusion Matrix')
-    plt.show()
+
+def plot_roc_auc(fpr, tpr, auc_score):
+    plt.figure(figsize=(7, 6))
+    plt.plot(fpr, tpr, color='blue', label=f'AUC = {auc_score:.4f}')
+    plt.plot([0, 1], [0, 1], color='gray', linestyle='--')  # Línea de aleatoriedad
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('ROC Curve')
+    plt.legend(loc='lower right')
 
 # Ciclo principal de entrenamiento
 def run():
@@ -114,6 +134,9 @@ def run():
     eval_accuracies = []
     eval_precisions = []
     eval_recalls = []
+    eval_f1_scores = []  # Lista para almacenar el F1-Score
+
+    fpr, tpr, auc_score = None, None, None
 
     for epoch in range(EPOCHS):
         print(f"Epoch {epoch + 1}/{EPOCHS}\n-------------------------------")
@@ -124,43 +147,55 @@ def run():
 
         # Evaluar el modelo después de cada época
         print(f"Evaluating after epoch {epoch + 1}...")
-        eval_loss, eval_accuracy, eval_precision, eval_recall, cm = evaluate_model(train_dataloader, model, loss_fn)
+        eval_loss, eval_accuracy, eval_precision, eval_recall, eval_f1, cm, fpr, tpr, auc_score = evaluate_model(train_dataloader, model, loss_fn)
         eval_losses.append(eval_loss)
         eval_accuracies.append(eval_accuracy)
         eval_precisions.append(eval_precision)
         eval_recalls.append(eval_recall)
+        eval_f1_scores.append(eval_f1)  # Almacenar F1-Score
 
-        print(f"Average Loss: {eval_loss:.4f}, Accuracy: {eval_accuracy * 100:.2f}%, Precision: {eval_precision:.4f}, Recall: {eval_recall:.4f}")
+        print(f"Average Loss: {eval_loss:.4f}, Accuracy: {eval_accuracy * 100:.2f}%, Precision: {eval_precision:.4f}, Recall: {eval_recall:.4f}, F1-Score: {eval_f1:.4f}")
         print("-" * 50)
 
     # Guardar el modelo
-    torch.save(model.state_dict(), "model2.pth")
+    torch.save(model.state_dict(), "model5.pth")
 
     # Graficar los resultados
     epochs = range(1, EPOCHS + 1)
-    plt.figure(figsize=(12, 5))
+    plt.figure(figsize=(15, 6))
 
-    # Graficar pérdida
-    plt.subplot(1, 2, 1)
+    # Graficar pérdida (Loss)
+    plt.subplot(1, 3, 1)
     plt.plot(epochs, train_losses, label="Training Loss")
-    plt.plot(epochs, eval_losses, label="Evaluation Loss")
+    plt.plot(epochs, eval_losses, label="Validation Loss")
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
     plt.title("Loss over Epochs")
     plt.legend()
 
-    # Graficar precisión
-    plt.subplot(1, 2, 2)
-    plt.plot(epochs, [acc * 100 for acc in eval_accuracies], label="Evaluation Accuracy")
-    plt.plot(epochs, [prec * 100 for prec in eval_precisions], label="Evaluation Precision")
-    plt.plot(epochs, [rec * 100 for rec in eval_recalls], label="Evaluation Recall")
+    # Graficar Accuracy, Precision y Recall juntos
+    plt.subplot(1, 3, 2)
+    plt.plot(epochs, [acc * 100 for acc in eval_accuracies], label="Accuracy", color="blue", linestyle='-')
+    plt.plot(epochs, [prec * 100 for prec in eval_precisions], label="Precision", color="green", linestyle='--')
+    plt.plot(epochs, [rec * 100 for rec in eval_recalls], label="Recall", color="red", linestyle=':')
     plt.xlabel("Epochs")
     plt.ylabel("Percentage (%)")
     plt.title("Accuracy, Precision, and Recall over Epochs")
     plt.legend()
+
+    # Graficar F1-Score
+    plt.subplot(1, 3, 3)
+    plt.plot(epochs, [f1 * 100 for f1 in eval_f1_scores], label="Validation F1-Score", color='orange')
+    plt.xlabel("Epochs")
+    plt.ylabel("F1-Score (%)")
+    plt.title("F1-Score over Epochs")
+    plt.legend()
+
     plt.tight_layout()
 
     plot_confusion_matrix(cm, dataset.labels)
+
+    plot_roc_auc(fpr, tpr, auc_score)
 
     plt.show()
 
