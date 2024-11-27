@@ -1,4 +1,13 @@
+# Sign Language Recognition System 
+This project implements a sign language recognition system that translates hand gestures from videos into text. It utilizes Mediapipe for hand keypoint detection and an Artificial Neural Network (ANN) for classification.
 
+This project requires Python 3.8 or higher.
+
+Ensure the training.json file contains the correct mapping between video IDs and corresponding glosses (words).
+
+This script trains the model using the data in dataset.json and saves the trained model as model2.pth. It also displays training progress, including loss and evaluation metrics, and generates plots for visualization.
+
+Inference: (Currently integrated with training) The main.py script currently performs inference on the training data after each training epoch.
 # Setup
 
 Para utilizar el repositorio es necesario abrir `Anaconda Prompt` e ir a una la direccion en la que se quiere instalar el repositorio, una vez ahí, se inicia con los siguientes pasos:
