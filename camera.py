@@ -6,7 +6,7 @@ from models import ANN
 import json
 import time
 
-MODEL_PATH = "model2.pth"
+MODEL_PATH = "modely.pth"
 
 # Cargar etiquetas desde el dataset.json
 def load_labels(json_path="dataset.json"):
